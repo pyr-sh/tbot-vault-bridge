@@ -24,6 +24,7 @@ var (
 	pusherURL      = flag.String("pusher_url", "", "url of the pusher server to use")
 	jwtSecret      = flag.String("jwt_secret", "", "secret to use to auth outgoing requests")
 	tbotTargetPath = flag.String("tbot_target_path", "", "path to the tbot target dir")
+	keyPrefix      = flag.String("key_prefix", "tbot-", "key prefix to use")
 	debounceTime   = flag.Duration("debounce_time", time.Second, "debounce time")
 )
 
@@ -114,7 +115,7 @@ func pushBundle(ctx context.Context, client *http.Client) error {
 		}
 
 		// persist it to vault
-		if err := pushValue(ctx, client, token, file.Name(), string(fileContents)); err != nil {
+		if err := pushValue(ctx, client, token, *keyPrefix+file.Name(), string(fileContents)); err != nil {
 			return fmt.Errorf("failed to push file %s as key %s: %w", fullPath, file.Name(), err)
 		}
 	}
