@@ -115,8 +115,14 @@ func pushBundle(ctx context.Context, client *http.Client) error {
 		}
 
 		// persist it to vault
-		if err := pushValue(ctx, client, token, *keyPrefix+file.Name(), string(fileContents)); err != nil {
-			return fmt.Errorf("failed to push file %s as key %s: %w", fullPath, file.Name(), err)
+		fileName := file.Name()
+		if fileName == ".write-test" {
+			fileName = "." + *keyPrefix + "write-test"
+		} else {
+			fileName = *keyPrefix + fileName
+		}
+		if err := pushValue(ctx, client, token, fileName, string(fileContents)); err != nil {
+			return fmt.Errorf("failed to push file %s as key %s: %w", fullPath, fileName, err)
 		}
 	}
 	log.Println("Synchronization iteration completed")
