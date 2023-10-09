@@ -117,7 +117,7 @@ func pushBundle(ctx context.Context, client *http.Client) error {
 		// persist it to vault
 		fileName := file.Name()
 		if fileName == ".write-test" {
-			fileName = "." + *keyPrefix + fileName
+			fileName = "." + *keyPrefix + "write-test"
 		} else {
 			fileName = *keyPrefix + fileName
 		}
