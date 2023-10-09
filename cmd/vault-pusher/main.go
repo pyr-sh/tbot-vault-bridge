@@ -75,6 +75,10 @@ func run(ctx context.Context) error {
 		return errors.New("auth method did not return valid credentials")
 	}
 
+	if err := manageTokenLifecycle(client, authInfo); err != nil {
+		return fmt.Errorf("unable to start managing token lifecycle: %w", err)
+	}
+
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -158,4 +162,48 @@ func run(ctx context.Context) error {
 	}
 	log.Println("Shutting down...")
 	return nil
+}
+
+// Reference: https://github.com/hashicorp/vault-examples/blob/main/examples/token-renewal/go/example.go
+
+// Starts token lifecycle management. Returns only fatal errors as errors,
+// otherwise returns nil so we can attempt login again.
+func manageTokenLifecycle(client *vault.Client, token *vault.Secret) error {
+	renew := token.Auth.Renewable // You may notice a different top-level field called Renewable. That one is used for dynamic secrets renewal, not token renewal.
+	if !renew {
+		log.Printf("Token is not configured to be renewable. Re-attempting login.")
+		return nil
+	}
+
+	watcher, err := client.NewLifetimeWatcher(&vault.LifetimeWatcherInput{
+		Secret:    token,
+		Increment: 60 * 60 * 24, // Learn more about this optional value in https://www.vaultproject.io/docs/concepts/lease#lease-durations-and-renewal
+	})
+	if err != nil {
+		return fmt.Errorf("unable to initialize new lifetime watcher for renewing auth token: %w", err)
+	}
+
+	go watcher.Start()
+	defer watcher.Stop()
+
+	for {
+		select {
+		// `DoneCh` will return if renewal fails, or if the remaining lease
+		// duration is under a built-in threshold and either renewing is not
+		// extending it or renewing is disabled. In any case, the caller
+		// needs to attempt to log in again.
+		case err := <-watcher.DoneCh():
+			if err != nil {
+				log.Printf("Failed to renew token: %v. Re-attempting login.", err)
+				return nil
+			}
+			// This occurs once the token has reached max TTL.
+			log.Printf("Token can no longer be renewed. Re-attempting login.")
+			return nil
+
+		// Successfully completed renewal
+		case renewal := <-watcher.RenewCh():
+			log.Printf("Successfully renewed: %#v", renewal)
+		}
+	}
 }
