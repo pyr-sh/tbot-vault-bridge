@@ -110,6 +110,7 @@ func run(ctx context.Context, tokenRenewalDoneCh chan struct{}) error {
 
 				go watcher.Start()
 				defer watcher.Stop()
+			renewalLoop:
 				for {
 					select {
 					case <-ctx.Done():
@@ -122,7 +123,7 @@ func run(ctx context.Context, tokenRenewalDoneCh chan struct{}) error {
 						}
 						authInfo = nil
 						watcher.Stop()
-						break
+						break renewalLoop
 					case renewal := <-watcher.RenewCh():
 						log.Printf("Successfully renewed: %#v", renewal)
 					}
