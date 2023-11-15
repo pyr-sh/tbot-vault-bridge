@@ -1,6 +1,6 @@
 .PHONY: docker-build docker-push
 
-export DOCKER_REPO=pyrsh/tbot-vault-bridge
+export DOCKER_REPO=registry.pyr.sh/tbot-vault-bridge/tbot-vault-bridge
 export GIT_COMMIT=$(shell git rev-parse --short HEAD)
 
 docker-build:
